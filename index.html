@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calendar</title>
+  <style>
+    * {margin: 0; padding: 0; box-sizing: border-box; line-height: 1;}
+    body {
+      background: #c4c4c4;
+    }
+    .calendar {
+      background: #457176;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      box-shadow: -2px -2px 2px 2px #f1f1f1, 
+                   2px 2px 2px 2px #7f7f7f,
+                   0 0 2px 2px red;
+      transform: translate(-50%, -50%);
+      border-radius: 5px;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      background: #4c5d82;
+      padding: 10px 0;
+      text-align: center;
+      color: #fff;
+      font-size: 40px;
+      text-shadow: 1px 1px 1px lime;
+      border-radius: 5px 5px 0 0;
+      margin: 0 -10px;
+    }
+    #current-month-year {
+      background: #764f5d;
+      color: #fff;
+      padding: 10px;
+      text-align: right;
+    }
+    #current-month-year > div {display: inline-block;}
+    #current-month-year > span {
+      display: inline-block;
+      margin-left: -3px;
+      color: #ffdc00;
+    }
+    #calendar-dates {
+      background: #457176;
+      color: #fff;
+      border-radius: 0 0 5px 5px;
+      padding: 5px;
+    }
+    .days-name {
+      background: #a47337;
+      color: #fff;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding: 0 15px;
+      margin: 0 -10px;
+    }
+    .days-name > div {
+      background: rgba(0,0,0,0.3);
+      margin: 2px;
+      text-align: center;
+      padding: 10px 5px;
+      border-radius: 5px;
+      border: 1px solid #fff;
+      outline: 1px solid #ea80fc;
+    }
+    #list {
+      text-align: center;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    #list > li {
+      list-style-type: none;
+      display: inline-block;
+      background: rgba(0,0,0,0.3);
+      border-radius: 3px;
+      border: 1px solid #fff;
+      padding: 10px;
+      margin: 2px;
+      outline: 1px solid #00e903;
+      transition: 0.5s;
+    }
+    #list > li:hover {
+      background: #00a902 !important;
+      color: #ec0a00;
+      outline: 4px solid #ea80fc;
+      filter: brightness(200%);
+    }
+    .holiday {
+      background: #930600 !important;
+    }
+    .handlers > button {
+      position: absolute;
+      bottom: 0;
+      height: 40px;
+      padding: 5px 8px;
+      font-size: 25px;
+      color: #fff;
+      font-weight: bold;
+      background: rgba(50,0,0,0.4);
+      box-shadow: -3px 0 2px 2px rgba(120,0,0,0.5);
+      backdrop-filter: blur(2px);
+      transition: 0.5s;
+      border-radius: 3px;
+      border: none;
+      outline: 0;
+      z-index: 1;
+    }
+    .slideIn {opacity: 1;}
+    .slideOut {opacity: 0;}
+    #leftH {transform: rotate(180deg); left: 0;}
+    #rightH {right: 0;}
+    @keyframes slid1 {
+      0% {transform: translateX(-100%);}
+      100% {transform: translateX(100%);}
+    }
+    @keyframes slid2 {
+      0% {transform: translateX(100%);}
+      100% {transform: translateX(-100%);}
+    }
+    #NaN {display: none}
+    #refresh {
+      position: absolute;
+      top: 18px;
+      right: 20px;
+      font-size: 40px;
+      border: 2px solid #fff;
+      outline: 4px solid #c60800;
+      filter: blur(2px);
+      transition: 0.3s;
+      border-radius: 3px;
+      background: #fff;
+    }
+    #refresh:hover {
+      outline: 8px solid #ea80cc;
+      filter: blur(2px) brightness(150%);
+    }
+    
+    
+    /* Watch */
+    #time {
+      position: absolute;
+      top: 5px;
+      right: 6px;
+      padding: 5px;
+      border-radius: 4px;
+      font-size: 20px;
+      color: #fff;
+      font-weight: bold;
+      text-align: center;
+      font-family: times new roman;
+      background: #6fac1d;
+      transform: translate(0, 0) scale(1);
+      transition: 0.3s;
+      box-shadow: 0 0 5px 1px gray;
+      user-select: none;
+    }
+    #date {
+      color: #b21e7d;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      display: block;
+      margin-bottom: 0px;
+    }
+    #time > i {
+      font-size: 8px;
+      font-stretch: condensed;
+      margin-left: -4px;
+      border-radius: 2px;
+      color: #fff;
+      background: #ab6900;
+      padding: 2px;
+      box-shadow: 0 0 0 2px #7a7a7a inset;
+      font-style: normal;
+    }
+    .rotator {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: linear-gradient(to left, #e4b200 10%, transparent, transparent);
+      border-radius: 8px;
+      animation: rotator 2s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes rotator {
+      0% {transform: rotate(0) scale(2);}
+      100% {transform: rotate(360deg) scale(2);}
+    }
+  </style>
+</head>
+<body>
+ <div class="calendar">
+  <div class="something">
+    <div class="header">Calendar</div>
+    <div id="current-month-year" onclick="test()">
+      <div id="month"></div>
+      <span>, </span>
+      <div id="year"></div>
+    </div>
+    <div class="days-name">
+      <div>Sun</div>
+      <div>Mon</div>
+      <div>Tue</div>
+      <div>Wed</div>
+      <div>Thu</div>
+      <div class="holiday">Fri</div>
+      <div class="holiday">Sat</div>
+    </div>
+    <div class="hand">
+      <div id="calendar-dates"></div>
+      <!-- Handlers -->
+      <div class="handlers">
+        <button id="leftH" class="slideOut">➜</button>
+        <button id="rightH" class="slideOut">➜</button>
+      </div>
+    </div>
+    <div id="refresh">📅</div>
+    <input id="NaN">
+   </div>
+   <div class="rotator"></div>
+  </div>  
+  <p id="time"></p>
+  
+ <script>
+    let cal = new Date();
+    let getYear = cal.getFullYear();
+    let getMonth = cal.getMonth() + 1;
+    function calendar() {
+        //Click to change Calendar
+        document.querySelector("#leftH").onclick = function() {
+        getMonth -= 1;
+        if (getMonth < 1) {
+          getMonth += 12;
+          getYear -= 1;
+        }
+        
+        let anime = document.getElementById("calendar-dates");
+        anime.style.animation = "none";
+        anime.offsetHeight;
+        anime.style.animation = "slid1 0.5s ease";
+        
+        special();
+        
+        let LHS = document.getElementById("leftH");  
+        if (LHS.style.opacity == 0) {
+           LHS.style.opacity = 1;
+        }
+        setTimeout(function() {
+          LHS.style.opacity = 0;
+        }, 1000);
+      }
+      document.querySelector("#rightH").onclick = function() {
+        getMonth += 1;
+        if (getMonth > 12) {
+          getMonth -= 12;
+          getYear += 1;
+        }
+        
+        let anime = document.getElementById("calendar-dates");
+        anime.style.animation = "none";
+        anime.offsetHeight;
+        anime.style.animation = "slid2 0.5s ease";
+        
+        
+        special();
+        
+        let RHS = document.getElementById("rightH");
+        if (RHS.style.opacity == 0) {
+           RHS.style.opacity = 1;
+        }
+        setTimeout(function() {
+          RHS.style.opacity = 0;
+        }, 1000);
+      }
+      
+      special();
+      let LChild = document.getElementsByTagName("li");
+      //Separate current date...
+      LChild[cal.getDate() - 1].style.background = "#00a902";
+    }
+    
+    function special() {
+        let getDays = new Date(getYear, getMonth, 0).getDate();
+        let monthArray = ["January", "February", "March", 
+                        "April", "May", "June", "July",
+                        "August", "September", "October",
+                        "November", "December"];
+        //Get Dates from loop...
+        let list = "<ul id='list'>";
+        for (i = 1; i <= getDays; i++) {
+          list += "<li>" + i + "</li>";
+        }
+        list += "</ul>";
+        document.querySelector("#calendar-dates").innerHTML = list;
+        
+        let LChild = document.getElementsByTagName("li");
+        let spanPoint = new Date(getYear, (getMonth -1), 1).getDay() + 1;
+        
+        //Start with first date...
+        LChild[0].style.gridColumnStart = spanPoint;
+        
+        //Color holidays by Satarday and Friday...
+        let holi = "rgba(120, 0, 0, 0.8)";
+        LLen = LChild.length;
+        for (i = 1; i <= LLen; i++) {
+          let fri = new Date(getYear, (getMonth - 1), i);
+          if (fri.getDay() >= 5) {
+            LChild[fri.getDate()-1].style.background = holi;
+            
+          }
+        }
+        
+        if (getYear == cal.getFullYear() && getMonth == (cal.getMonth()+1)) {
+          LChild[cal.getDate() - 1].style.background = "#00a902";
+        }
+        
+        //Show Month Title...
+        document.querySelector("#month").innerHTML = monthArray[getMonth - 1];
+        let yearTitle = document.querySelector("#year");
+        yearTitle.innerHTML = getYear;
+        if (getYear < 0) {
+          yearTitle.innerHTML = `${getYear} BC`;
+        }
+    }
+    function test() {
+      document.getElementById("month").onclick = function() {
+        let took = prompt("Please enter a number of month:","");
+        let num = document.getElementById("NaN");
+        num.value = Number(took) + 0;
+        
+        if (num.value == "NaN" || num.value <= 0 || num.value > 12) {
+          alert(`‼️${took}‼️ may not be suitable. Please make sure, your number is between 1 to 12.`);
+        } else {
+          getMonth = num.value;
+        }
+      }
+      document.getElementById("year").onclick = function() {
+        let took = prompt("Please enter a number of year:","");
+        let num = document.getElementById("NaN");
+        num.value = Number(took) + 0;
+        
+        if (num.value == "NaN" || num.value >= 100000 || num.value <= -100000) {
+          alert(`‼️${took}‼️ may not be suitable. Please make sure, you have entered between -99999 to 99999.`);
+        } else {
+          getYear = num.value;
+        }
+      }
+      
+      special();
+    }
+    calendar();
+    
+    document.querySelector("#refresh").onclick = function() {
+      setTimeout(function() {
+        location.reload();
+      }, 500);
+    };
+ </script>
+ <script>
+    window.onload = function() {
+      setInterval(function(){
+        //Times..
+        let p = new Date();
+        let q = p.getHours();
+        let r = p.getMinutes();
+        let s = p.getSeconds();
+        
+        if (q > 12) {q -= 12}
+        if (r < 10) {r = "0" + r}
+        if (s < 10) {s = "0" + s}
+        let result = q + " : " + r + " : " + s;
+        
+        if (p.getHours() > 12) {
+          result += " <i>অপরাহ্ন</i>";
+        } else {
+          result += " <i>পূর্বাহ্ন</i>";
+        }
+        if (result.slice(0, 2) < 10) {
+          result = "0" + result;
+        }
+        //Date and Year..
+        let a = Date();
+        let b = a.slice(0, 3);
+        let c = a.slice(4, 7);
+        let d = a.slice(11, 16)
+        
+        let myDATE = new Date().getDate();
+        if (myDATE < 10) {
+          myDATE = "0" + new Date().getDate();
+        }
+        
+        let z = "<b id='date'>" + b + ", " + myDATE + 
+                " " + c + ", " + d + "</b>";
+                
+                
+        //To translate times and date in Bangla..
+        //Translate Times...
+        result = result.replaceAll("0", "০");
+        result = result.replaceAll("1", "১");
+        result = result.replaceAll("2", "২");
+        result = result.replaceAll("3", "৩");
+        result = result.replaceAll("4", "৪");
+        result = result.replaceAll("5", "৫");
+        result = result.replaceAll("6", "৬");
+        result = result.replaceAll("7", "৭");
+        result = result.replaceAll("8", "৮");
+        result = result.replaceAll("9", "৯");
+        
+        //Translate Date and Year...
+        z = z.replaceAll("0", "০");
+        z = z.replaceAll("1", "১");
+        z = z.replaceAll("2", "২");
+        z = z.replaceAll("3", "৩");
+        z = z.replaceAll("4", "৪");
+        z = z.replaceAll("5", "৫");
+        z = z.replaceAll("6", "৬");
+        z = z.replaceAll("7", "৭");
+        z = z.replaceAll("8", "৮");
+        z = z.replaceAll("9", "৯");
+        
+        //Translate Week...
+        z = z.replaceAll("Sat", "শনি");
+        z = z.replaceAll("Sun", "রবি");
+        z = z.replaceAll("Mon", "সোম");
+        z = z.replaceAll("Tue", "মঙ্গল");
+        z = z.replaceAll("Wed", "বুধ");
+        z = z.replaceAll("Thu", "বৃহস্পতি");
+        z = z.replaceAll("Fri", "শুক্র");
+        
+        //Translate Months...
+        z = z.replaceAll("Jan", "জানুয়ারি");
+        z = z.replaceAll("Feb", "ফেব্রুয়ারি");
+        z = z.replaceAll("Mar", "মার্চ");
+        z = z.replaceAll("Apr", "এপ্রিল");
+        z = z.replaceAll("May", "মে");
+        z = z.replaceAll("Jun", "জুন");
+        z = z.replaceAll("Jul", "জুলাই");
+        z = z.replaceAll("Aug", "আগস্ট");
+        z = z.replaceAll("Sep", "সেপ্টেম্বর");
+        z = z.replaceAll("Oct", "অক্টোবর");
+        z = z.replaceAll("Nov", "নভেম্বর");
+        z = z.replaceAll("Dec", "ডিসেম্বর");
+        
+        
+        document.getElementById("time").innerHTML = z + result; 
+      },1000);
+    }
+    
+    document.getElementById("time").onclick = function() {
+      let x = document.getElementById("time");
+      
+      if (x.style.transform=="scale(1)") {
+        x.style.transform = "translate(-50%, -50%) scale(1.75)";
+        x.style.top = "50%";
+        x.style.left = "50%";
+        x.style.outline = "15px solid rgba(0,0,0,0.2)";
+      } 
+      else {
+        x.style.transform = "scale(1)";
+        x.style.top = "5px";
+        x.style.left = "auto";
+        x.style.right = "6px";
+        x.style.outline = 0;
+      }
+    }
+   
+ </script>
+ <noscript>
+    Your device is not supported by JavaScript. Or, 
+    may be disabled in your browser. <br><br>
+    Please turn on JavaScript from your Browser Settings or clear the cache.
+    Otherwise this page will not work.
+    <style>
+      .calendar {
+        display: none;
+      }
+      body {
+        color: #fff;
+        font-weight: bold;
+        user-select: none;
+        animation: anime 0.5s ease infinite;
+      }
+      noscript {
+        display: inline-block;
+        text-align: left;
+        width: 80vw;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 5px 3px #b73dad;
+        padding: 10px;
+        border-radius: 5px;
+      }
+      br {
+        margin-top: 10px;
+      }
+      @keyframes anime {
+        0% {background: #86110;}
+        50% {background: #800005;}
+        100% {background: #86110;}
+      }
+    </style>
+  </noscript>
+</body>
+</html>
