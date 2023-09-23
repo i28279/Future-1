@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester with Options</title>
+    <style>
+        /* Your CSS styles here */
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #response {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>        
+</head>
+<body>
+    <div class="container">
+        <h1>API Tester</h1>
+        <label for="apiUrl">API URL:</label>
+        <input type="text" id="apiUrl" value="https://your-api-url.com">
+        
+        <label for="requestMethod">HTTP Method:</label>
+        <select id="requestMethod" onchange="toggleRequestBody()">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="HEAD">HEAD</option>
+        </select>
+        
+        <label for="requestHeaders">Request Headers (JSON):</label>
+        <textarea id="requestHeaders" rows="4" cols="50">{"Content-Type": "application/json"}</textarea>
+
+        <label for="requestBody">Request Body:</label>
+        <textarea id="requestBody" rows="6" cols="50">{"key": "value"}</textarea>
+
+        <label for="requestOptions">Request Options:</label>
+        <select id="requestOptions" multiple>
+            <option value="cookies">Send Cookies</option>
+            <option value="cache">Cache</option>
+            <option value="custom">Custom Data</option>
+        </select>
+
+        <div id="customField" style="display: none;">
+            <label for="customData">Custom Data:</label>
+            <input type="text" id="customData" placeholder="Enter custom data">
+        </div>
+        
+        <br>
+        <button onclick="sendRequest()">Send Request</button>
+        <div id="response" style="white-space: pre-line;"></div>
+
+        <div id="consoleCounts"></div>
+    </div>
+
+    <script>
+        // Function to capture console messages and count them
+        function captureAndCountConsoleMessages() {
+            const consoleCounts = document.getElementById('consoleCounts');
+            const counts = {
+                log: 0,
+                warn: 0,
+                error: 0,
+            };
+
+            const originalConsole = {
+                log: console.log,
+                warn: console.warn,
+                error: console.error,
+            };
+
+            console.log = function(...args) {
+                originalConsole.log(...args); // Log to the browser console
+                counts.log++;
+                updateCounts();
+            };
+
+            console.warn = function(...args) {
+                originalConsole.warn(...args); // Log to the browser console
+                counts.warn++;
+                updateCounts();
+            };
+
+            console.error = function(...args) {
+                originalConsole.error(...args); // Log to the browser console
+                counts.error++;
+                updateCounts();
+            };
+
+            function updateCounts() {
+                consoleCounts.innerHTML = `<p>Log Count: ${counts.log}</p><p>Warning Count: ${counts.warn}</p><p>Error Count: ${counts.error}</p>`;
+            }
+        }
+
+        // Call the captureAndCountConsoleMessages function to start capturing and counting console output
+        captureAndCountConsoleMessages();
+        
+        // Function to toggle the custom data field
+        function toggleCustomField() {
+            const requestOptions = document.getElementById('requestOptions');
+            const customField = document.getElementById('customField');
+            
+            if (Array.from(requestOptions.selectedOptions).some(option => option.value === 'custom')) {
+                customField.style.display = 'block';
+            } else {
+                customField.style.display = 'none';
+            }
+        }
+
+        // Function to send API request
+        function sendRequest() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const requestMethod = document.getElementById('requestMethod').value;
+            const requestHeaders = JSON.parse(document.getElementById('requestHeaders').value);
+            let requestBody = document.getElementById('requestBody').value;
+            const requestOptions = document.getElementById('requestOptions');
+            const customData = document.getElementById('customData').value;
+
+            // Include selected options in the request headers
+            const selectedOptions = Array.from(requestOptions.selectedOptions).map(option => option.value);
+            requestHeaders['Request-Options'] = selectedOptions.join(', ');
+
+            // Add custom data to the request body if "Custom Data" is selected
+            if (selectedOptions.includes('custom')) {
+                requestHeaders['Custom-Data'] = customData;
+            }
+
+            // Check if the method is GET or HEAD and set the request body accordingly
+            if (requestMethod === 'GET' || requestMethod === 'HEAD') {
+                requestBody = ''; // Clear the request body for GET and HEAD
+            }
+
+            fetch(apiUrl, {
+                method: requestMethod,
+                headers: requestHeaders,
+                body: requestBody,
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error('Error fetching API data:', error);
+                    const errorMessages = error.message.split('\n');
+                    const formattedErrors = errorMessages.map((message, index) => `${index + 1}. ${message}`).join('\n---\n');
+                    document.getElementById('response').textContent = formattedErrors;
+                });
+        }
+
+        // Listen for changes in the selected options and toggle the custom data field accordingly
+        document.getElementById('requestOptions').addEventListener('change', toggleCustomField);
+    </script>
+</body>
+</html>
